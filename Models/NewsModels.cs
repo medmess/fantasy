@@ -5,7 +5,9 @@ public sealed record TelegramNewsPostRequest(
     string Caption,
     string ImagePath,
     DateTimeOffset PublishedAt,
-    string Source);
+    string Source,
+    string? ImageBase64,
+    string? ImageContentType);
 
 public sealed record AdminNewsPostRequest(
     string Caption,

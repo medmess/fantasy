@@ -37,6 +37,21 @@ public sealed class InMemoryNewsRepository : INewsRepository
         }
     }
 
+    public Task<NewsPost?> UpdateImageUrlAsync(long telegramPostId, string imageUrl, string imagePath)
+    {
+        lock (_lock)
+        {
+            if (!_postsByTelegramId.TryGetValue(telegramPostId, out var post))
+            {
+                return Task.FromResult<NewsPost?>(null);
+            }
+
+            var updated = post with { ImageUrl = imageUrl, ImagePath = imagePath };
+            _postsByTelegramId[telegramPostId] = updated;
+            return Task.FromResult<NewsPost?>(updated);
+        }
+    }
+
     public Task<bool> DeleteByTelegramPostIdAsync(long telegramPostId)
     {
         lock (_lock)

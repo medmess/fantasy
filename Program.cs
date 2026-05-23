@@ -20,6 +20,7 @@ builder.Services.Configure<SupabaseOptions>(
 builder.Services.AddHttpClient<SupabaseAuthService>();
 builder.Services.AddHttpClient<SupabaseGroupRepository>();
 builder.Services.AddHttpClient<SupabaseNewsRepository>();
+builder.Services.AddHttpClient<SupabaseStorageService>();
 builder.Services.AddSingleton<InMemoryGroupRepository>();
 builder.Services.AddSingleton<InMemoryNewsRepository>();
 builder.Services.AddSingleton<GroupCodeGenerator>();
@@ -93,9 +94,7 @@ app.MapPost("/api/news/telegram", async (
     }
 
     var post = await news.AddTelegramPostAsync(request);
-    return post is null
-        ? Results.Conflict(new { message = "Telegram post already exists." })
-        : Results.Ok(NewsPostResponse.From(post));
+    return Results.Ok(NewsPostResponse.From(post!));
 });
 
 app.MapPost("/api/news/admin", async (

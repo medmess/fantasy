@@ -2,19 +2,36 @@ using GfnTvBackend.Models;
 
 namespace GfnTvBackend.Services;
 
-public sealed class NewsService(INewsRepository repository)
+public sealed class NewsService(INewsRepository repository, SupabaseStorageService storage)
 {
     public async Task<NewsPost?> AddTelegramPostAsync(TelegramNewsPostRequest request)
     {
         var existing = await repository.FindByTelegramPostIdAsync(request.TelegramPostId);
-        if (existing is not null) return null;
+        var imageUrl = await storage.UploadNewsImageAsync(
+            request.TelegramPostId,
+            request.ImageBase64,
+            request.ImageContentType);
+
+        if (existing is not null)
+        {
+            if (string.IsNullOrWhiteSpace(existing.ImageUrl) &&
+                !string.IsNullOrWhiteSpace(imageUrl))
+            {
+                return await repository.UpdateImageUrlAsync(
+                    existing.TelegramPostId,
+                    imageUrl,
+                    request.ImagePath.Trim());
+            }
+
+            return existing;
+        }
 
         var post = new NewsPost(
             Guid.NewGuid().ToString("N"),
             request.TelegramPostId,
             request.Caption.Trim(),
             request.ImagePath.Trim(),
-            null,
+            imageUrl,
             string.IsNullOrWhiteSpace(request.Source) ? "Offside" : request.Source.Trim(),
             request.PublishedAt,
             DateTimeOffset.UtcNow);
@@ -54,5 +71,6 @@ public interface INewsRepository
     Task<NewsPost?> FindByTelegramPostIdAsync(long telegramPostId);
     Task<NewsPost> CreateAsync(NewsPost post);
     Task<IReadOnlyList<NewsPost>> GetLatestAsync(int limit);
+    Task<NewsPost?> UpdateImageUrlAsync(long telegramPostId, string imageUrl, string imagePath);
     Task<bool> DeleteByTelegramPostIdAsync(long telegramPostId);
 }

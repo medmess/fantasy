@@ -44,6 +44,33 @@ public sealed class SupabaseNewsRepository(
         return posts.Select(ParsePost).ToArray();
     }
 
+    public async Task<NewsPost?> UpdateImageUrlAsync(
+        long telegramPostId,
+        string imageUrl,
+        string imagePath)
+    {
+        using var request = CreateRequest(
+            HttpMethod.Patch,
+            $"news_posts?telegram_post_id=eq.{telegramPostId}");
+        request.Content = new StringContent(
+            JsonSerializer.Serialize(new
+            {
+                image_url = imageUrl,
+                image_path = imagePath
+            }, JsonOptions),
+            Encoding.UTF8,
+            "application/json");
+        request.Headers.TryAddWithoutValidation("Prefer", "return=representation");
+
+        using var response = await httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+
+        await using var stream = await response.Content.ReadAsStreamAsync();
+        using var document = await JsonDocument.ParseAsync(stream);
+        var posts = document.RootElement.EnumerateArray().ToArray();
+        return posts.Length == 0 ? null : ParsePost(posts[0]);
+    }
+
     public async Task<bool> DeleteByTelegramPostIdAsync(long telegramPostId)
     {
         using var request = CreateRequest(
