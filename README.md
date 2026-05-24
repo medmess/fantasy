@@ -46,6 +46,8 @@ Authorization: Bearer <supabase_access_token>
 - `POST /api/news/telegram`
 - `GET /api/news/latest`
 - `GET /api/news/image/{fileName}`
+- `GET /api/ads/news`
+- `POST /api/ads/news`
 
 Run `supabase/schema.sql` in the Supabase SQL editor when you want database
 persistence for groups.

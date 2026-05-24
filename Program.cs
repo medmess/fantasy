@@ -20,14 +20,17 @@ builder.Services.Configure<SupabaseOptions>(
 builder.Services.AddHttpClient<SupabaseAuthService>();
 builder.Services.AddHttpClient<SupabaseGroupRepository>();
 builder.Services.AddHttpClient<SupabaseNewsRepository>();
+builder.Services.AddHttpClient<SupabaseNewsAdRepository>();
 builder.Services.AddHttpClient<SupabaseStorageService>();
 builder.Services.AddSingleton<InMemoryGroupRepository>();
 builder.Services.AddSingleton<InMemoryNewsRepository>();
+builder.Services.AddSingleton<InMemoryNewsAdRepository>();
 builder.Services.AddSingleton<GroupCodeGenerator>();
 builder.Services.AddScoped<FantasyScoringService>();
 builder.Services.AddScoped<StandingsService>();
 builder.Services.AddScoped<GroupService>();
 builder.Services.AddScoped<NewsService>();
+builder.Services.AddScoped<NewsAdService>();
 builder.Services.AddScoped<IGroupRepository>(provider =>
 {
     var options = provider
@@ -47,6 +50,16 @@ builder.Services.AddScoped<INewsRepository>(provider =>
     return options.IsConfigured
         ? provider.GetRequiredService<SupabaseNewsRepository>()
         : provider.GetRequiredService<InMemoryNewsRepository>();
+});
+builder.Services.AddScoped<INewsAdRepository>(provider =>
+{
+    var options = provider
+        .GetRequiredService<Microsoft.Extensions.Options.IOptions<SupabaseOptions>>()
+        .Value;
+
+    return options.IsConfigured
+        ? provider.GetRequiredService<SupabaseNewsAdRepository>()
+        : provider.GetRequiredService<InMemoryNewsAdRepository>();
 });
 
 var app = builder.Build();
@@ -121,6 +134,26 @@ app.MapGet("/api/news/latest", async (int? limit, NewsService news, HttpRequest 
         ? publicBaseUrl.TrimEnd('/')
         : $"{(string.IsNullOrWhiteSpace(forwardedProto) ? request.Scheme : forwardedProto)}://{(string.IsNullOrWhiteSpace(forwardedHost) ? request.Host : forwardedHost)}";
     return Results.Ok(posts.Select(post => NewsPostResponse.From(post, baseUrl)));
+});
+
+app.MapGet("/api/ads/news", async (NewsAdService ads) =>
+{
+    var activeAds = await ads.GetActiveAsync();
+    return Results.Ok(activeAds.Select(NewsAdResponse.From));
+});
+
+app.MapPost("/api/ads/news", async (
+    NewsAdRequest request,
+    NewsAdService ads) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Title) ||
+        string.IsNullOrWhiteSpace(request.ImageUrl))
+    {
+        return Results.BadRequest(new { message = "title and imageUrl are required." });
+    }
+
+    var ad = await ads.CreateAsync(request);
+    return Results.Ok(NewsAdResponse.From(ad));
 });
 
 app.MapDelete("/api/news/telegram/{telegramPostId:long}", async (
@@ -216,5 +249,27 @@ sealed record NewsPostResponse(
             post.Source,
             post.PublishedAt,
             post.CreatedAt);
+    }
+}
+
+sealed record NewsAdResponse(
+    string Id,
+    string Title,
+    string? Subtitle,
+    string ImageUrl,
+    string? TargetUrl,
+    bool IsActive,
+    DateTimeOffset CreatedAt)
+{
+    public static NewsAdResponse From(NewsAd ad)
+    {
+        return new NewsAdResponse(
+            ad.Id,
+            ad.Title,
+            ad.Subtitle,
+            ad.ImageUrl,
+            ad.TargetUrl,
+            ad.IsActive,
+            ad.CreatedAt);
     }
 }

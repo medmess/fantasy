@@ -54,3 +54,24 @@ create policy "news posts are readable"
 on public.news_posts
 for select
 using (true);
+
+create table if not exists public.news_ads (
+  id text primary key,
+  title text not null,
+  subtitle text,
+  image_url text not null,
+  target_url text,
+  placement text not null default 'news_feed',
+  is_active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists news_ads_active_created_at_idx
+on public.news_ads (is_active, created_at desc);
+
+alter table public.news_ads enable row level security;
+
+create policy "active news ads are readable"
+on public.news_ads
+for select
+using (is_active = true);

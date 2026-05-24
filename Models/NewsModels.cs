@@ -24,3 +24,19 @@ public sealed record NewsPost(
     string Source,
     DateTimeOffset PublishedAt,
     DateTimeOffset CreatedAt);
+
+public sealed record NewsAdRequest(
+    string Title,
+    string? Subtitle,
+    string ImageUrl,
+    string? TargetUrl,
+    bool? IsActive);
+
+public sealed record NewsAd(
+    string Id,
+    string Title,
+    string? Subtitle,
+    string ImageUrl,
+    string? TargetUrl,
+    bool IsActive,
+    DateTimeOffset CreatedAt);
